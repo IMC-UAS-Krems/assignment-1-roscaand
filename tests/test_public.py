@@ -18,13 +18,16 @@ Run with:
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from streaming.platform import StreamingPlatform
 from streaming.users import FreeUser, PremiumUser, FamilyAccountUser, FamilyMember
-from streaming.playlists import CollaborativePlaylist
-from tests.conftest import FIXED_NOW, RECENT, OLD
-
+from streaming.playlists import Playlist, CollaborativePlaylist
+from streaming.sessions import ListeningSession
+from streaming.artists import Artist
+from streaming.albums import Album
+from streaming.tracks import AlbumTrack, SingleRelease
+from conftest import FIXED_NOW, RECENT, OLD
 
 # ===========================================================================
 # Q1 - Total cumulative listening time for a given period
@@ -55,7 +58,18 @@ class TestTotalListeningTime:
     # TODO: Add a test that verifies the correct value for a known time period.
     #       Calculate the expected total based on the fixture data in conftest.py.
     def test_known_period_value(self, platform: StreamingPlatform) -> None:
-        pass
+        alice = platform.get_user("u1")
+        t1 = platform.get_track("t1")
+        t2 = platform.get_track("t2")
+
+        platform.record_session(ListeningSession("s1", alice, t1, RECENT, 180))
+        platform.record_session(ListeningSession("s2", alice, t2, RECENT, 120))
+
+        result = platform.total_listening_time_minutes(
+            RECENT - timedelta(minutes=1), FIXED_NOW
+        )
+        assert result == 5.0
+
 
 
 # ===========================================================================
@@ -86,7 +100,15 @@ class TestAvgUniqueTracksPremium:
     #       average for premium users. You'll need to count unique tracks
     #       per premium user and calculate the average.
     def test_correct_value(self, platform: StreamingPlatform) -> None:
-        pass
+        bob = platform.get_user("u2")
+        t1 = platform.get_track("t1")
+        t2 = platform.get_track("t2")
+
+        platform.record_session(ListeningSession("s1", bob, t1, RECENT, 180))
+        platform.record_session(ListeningSession("s2", bob, t1, RECENT, 120))
+        platform.record_session(ListeningSession("s3", bob, t1, RECENT, 210))
+        platform.record_session(ListeningSession("s4", bob, t2, OLD, 210))
+        assert platform.avg_unique_tracks_per_premium_user(days = 30)
 
 
 # ===========================================================================
@@ -110,7 +132,15 @@ class TestTrackMostDistinctListeners:
     # TODO: Add a test that verifies the correct track is returned.
     #       Count listeners per track from the fixture data.
     def test_correct_track(self, platform: StreamingPlatform) -> None:
-        pass
+        alice = platform.get_user("u1")
+        bob = platform.get_user("u2")
+        t1 = platform.get_track("t1")
+        t2 = platform.get_track("t2")
+        platform.record_session(ListeningSession("s1", alice, t1, RECENT, 100))
+        platform.record_session(ListeningSession("s2", bob, t1, RECENT, 100))
+        platform.record_session(ListeningSession("s3", alice, t2, RECENT, 100))
+
+        assert platform.track_with_most_distinct_listeners() == t1
 
 
 # ===========================================================================
@@ -142,8 +172,18 @@ class TestAvgSessionDurationByType:
 
     # TODO: Add tests to verify all user types are present and have correct averages.
     def test_all_user_types_present(self, platform: StreamingPlatform) -> None:
-        pass
+        free = platform.get_user("u1")
+        premium = platform.get_user("u2")
+        t1 = platform.get_track("t1")
 
+        platform.record_session(ListeningSession("s1", free, t1, RECENT, 100))
+        platform.record_session(ListeningSession("s2", premium, t1, RECENT, 300))
+
+        result = platform.avg_session_duration_by_user_type()
+        type_names = [item[0] for item in result]
+
+        assert "FreeUser" in type_names
+        assert "PremiumUser" in type_names
 
 # ===========================================================================
 # Q5 - Total listening time for underage sub-users
@@ -171,10 +211,30 @@ class TestUnderageSubUserListening:
 
     # TODO: Add tests for correct values with default and custom thresholds.
     def test_correct_value_default_threshold(self, platform: StreamingPlatform) -> None:
-        pass
+        parent = FamilyAccountUser ("u3", "Parent", age = 30)
+        child = FamilyMember("u4", "Child", age = 15, parent = parent)
+
+        platform.add_user(parent)
+        platform.add_user(child)
+
+        t1 = platform.get_track("t1")
+        platform.record_session(ListeningSession("s1",child, t1, RECENT, 180))
+        platform.record_session(ListeningSession("s2", child, t1, RECENT, 120))
+
+        assert platform.total_listening_time_underage_sub_users_minutes() == 5.0
 
     def test_custom_threshold(self, platform: StreamingPlatform) -> None:
-        pass
+        parent = FamilyAccountUser("u3", "Parent", age=40)
+        teen = FamilyMember("u4", "Teen", age=16, parent=parent)
+
+        platform.add_user(parent)
+        platform.add_user(teen)
+
+        t1 = platform.get_track("t1")
+        platform.record_session(ListeningSession("s1", teen, t1, RECENT, 120))
+
+        assert platform.total_listening_time_underage_sub_users_minutes(age_threshold=16) == 0.0
+        assert platform.total_listening_time_underage_sub_users_minutes(age_threshold=17) == 2.0
 
 
 # ===========================================================================
