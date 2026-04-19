@@ -71,3 +71,12 @@ class TestTracks:
         audio = AudiobookTrack("a1", "Chapter", 600, "audio", author="Auth", narrator="Narr")
         assert audio.author == "Auth"
         assert audio.narrator == "Narr"
+
+    def test_song_is_track(self) -> None:
+        artist = Artist("a1", "Artist", genre="pop")
+        song = Song("t1", "Song", 120, "pop", artist)
+        assert isinstance(song, Track)
+
+    def test_podcast_is_track(self) -> None:
+        pod = Podcast("p1", "Pod", 1800, "podcast", host="Host")
+        assert isinstance(pod, Track)

@@ -273,7 +273,18 @@ class TestTopArtistsByListeningTime:
 
     # TODO: Add a test that verifies the correct artists and values.
     def test_top_artist(self, platform: StreamingPlatform) -> None:
-        pass
+        bob = platform.get_user("u2")
+        artist = platform.get_artist("a1")
+        t1 = platform.get_track("t1")
+        t2 = platform.get_track("t2")
+
+        platform.record_session(ListeningSession("s1", bob, t1, RECENT, 180))
+        platform.record_session(ListeningSession("s2", bob, t2, RECENT, 120))
+
+        result = platform.top_artists_by_listening_time(n=1)
+        assert result[0][0] == artist
+        assert result[0][1] == 5.0
+
 
 
 # ===========================================================================
@@ -310,7 +321,16 @@ class TestUserTopGenre:
 
     # TODO: Add a test that verifies the correct genre and percentage for a known user.
     def test_correct_top_genre(self, platform: StreamingPlatform) -> None:
-        pass
+        alice = platform.get_user("u1")
+        t1 = platform.get_track("t1")
+        t2 = platform.get_track("t2")
+
+        platform.record_session(ListeningSession("s1", alice, t1, RECENT, 180))
+        platform.record_session(ListeningSession("s2", alice, t2, RECENT, 120))
+
+        genre, pct = platform.user_top_genre("u1")
+        assert genre == "pop"
+        assert pct == 100.0
 
 
 # ===========================================================================
@@ -345,7 +365,33 @@ class TestCollaborativePlaylistsManyArtists:
     # TODO: Add tests that verify the correct playlists are returned with
     #       different threshold values.
     def test_default_threshold(self, platform: StreamingPlatform) -> None:
-        pass
+        owner = platform.get_user("u1")
+
+        artist2 = Artist("a2", "Rocks", "rock")
+        artist3 = Artist("a3", "Jazzers", "jazz")
+        artist4 = Artist("a4", "Synths", "electro")
+
+        platform.add_artist(artist2)
+        platform.add_artist(artist3)
+        platform.add_artist(artist4)
+
+        s2 = SingleRelease("x2", "R1", 100, "rock", artist2, date(2024, 1, 1))
+        s3 = SingleRelease("x3", "J1", 100, "jazz", artist3, date(2024, 1, 1))
+        s4 = SingleRelease("x4", "E1", 100, "electro", artist4, date(2024, 1, 1))
+
+        platform.add_track(s2)
+        platform.add_track(s3)
+        platform.add_track(s4)
+
+        cp = CollaborativePlaylist("cp1", "Collab", owner)
+        cp.add_track(platform.get_track("t1"))
+        cp.add_track(s2)
+        cp.add_track(s3)
+        cp.add_track(s4)
+        platform.add_playlist(cp)
+
+        result = platform.collaborative_playlists_with_many_artists()
+        assert result == [cp]
 
 
 # ===========================================================================
@@ -372,13 +418,40 @@ class TestAvgTracksPerPlaylistType:
         assert "CollaborativePlaylist" in result
 
     # TODO: Add tests that verify the correct averages for each playlist type.
+
     def test_standard_playlist_average(self, platform: StreamingPlatform) -> None:
-        pass
+        owner = platform.get_user("u1")
+
+        p1 = Playlist("p1", "One", owner)
+        p2 = Playlist("p2", "Two", owner)
+
+        p1.add_track(platform.get_track("t1"))
+        p1.add_track(platform.get_track("t2"))
+        p2.add_track(platform.get_track("t3"))
+
+        platform.add_playlist(p1)
+        platform.add_playlist(p2)
+
+        result = platform.avg_tracks_per_playlist_type()
+        assert result["Playlist"] == 1.5
 
     def test_collaborative_playlist_average(
         self, platform: StreamingPlatform
     ) -> None:
-        pass
+        owner = platform.get_user("u1")
+
+        cp1 = CollaborativePlaylist("cp1", "C1", owner)
+        cp2 = CollaborativePlaylist("cp2", "C2", owner)
+
+        cp1.add_track(platform.get_track("t1"))
+        cp1.add_track(platform.get_track("t2"))
+        cp2.add_track(platform.get_track("t3"))
+
+        platform.add_playlist(cp1)
+        platform.add_playlist(cp2)
+
+        result = platform.avg_tracks_per_playlist_type()
+        assert result["CollaborativePlaylist"] == 1.5
 
 
 # ===========================================================================
@@ -414,7 +487,32 @@ class TestUsersWhoCompletedAlbums:
 
     # TODO: Add tests that verify the correct users and albums are identified.
     def test_correct_users_identified(self, platform: StreamingPlatform) -> None:
-        pass
+        bob = platform.get_user("u2")
+
+        for i, tid in enumerate(["t1", "t2", "t3"], start=1):
+            platform.record_session(
+                ListeningSession(f"s{i}", bob, platform.get_track(tid), RECENT, 100)
+            )
+
+        result = platform.users_who_completed_albums()
+        user_ids = [user.user_id for user, _ in result]
+
+        assert "u2" in user_ids
 
     def test_correct_album_titles(self, platform: StreamingPlatform) -> None:
-        pass
+        bob = platform.get_user("u2")
+
+        for i, tid in enumerate(["t1", "t2", "t3"], start=1):
+            platform.record_session(
+                ListeningSession(f"s{i}", bob, platform.get_track(tid), RECENT, 100)
+            )
+
+        result = platform.users_who_completed_albums()
+
+        bob_titles = None
+        for user, titles in result:
+            if user.user_id == "u2":
+                bob_titles = titles
+                break
+
+        assert bob_titles == ["Digital Dreams"]

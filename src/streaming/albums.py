@@ -1,3 +1,11 @@
+"""
+albums.py
+---------
+Implement the Album class for collections of AlbumTrack objects.
+
+Classes to implement:
+  - Album
+"""
 class Album:
     def __init__(self, album_id: str, title: str, artist, release_year: int):
         self.album_id = album_id

@@ -1,3 +1,16 @@
+"""
+users.py
+--------
+Implement the class hierarchy for platform users.
+
+Classes to implement:
+  - User (base class)
+    - FreeUser
+    - PremiumUser
+    - FamilyAccountUser
+    - FamilyMember
+"""
+
 class User:
     def __init__(self, user_id: str, name: str, age: int):
         self.user_id = user_id

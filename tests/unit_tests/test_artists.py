@@ -33,3 +33,9 @@ class TestArtists:
         artist.add_track(track)
         assert track in artist.tracks
 
+    def test_add_same_track_only_once(self):
+        artist = Artist("a1", "Artist", genre="pop")
+        track = Track("t1", "Song", 120, "pop")
+        artist.add_track(track)
+        artist.add_track(track)
+        assert artist.track_count() == 1
